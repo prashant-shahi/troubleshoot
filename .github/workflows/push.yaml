@@ -31,12 +31,18 @@ jobs:
         id: branch-name
         uses: tj-actions/branch-names@v5.1
       - name: Build and push docker image
+        env:
+          DOCKER_TAG: ${{ steps.branch-name.outputs.tag }}
+        if: steps.branch-name.outputs.is_tag == 'true'
         run: |
-          if [ '${{ steps.branch-name.outputs.is_tag }}' == 'true' ]; then
-            DOCKER_TAG="${{ steps.branch-name.outputs.tag }}"
-          else
-            DOCKER_TAG="latest"
-          fi
+          docker buildx build --file Dockerfile --progress plane --no-cache --push \
+            --tag ${{ secrets.DOCKERHUB_USERNAME }}/${DOCKER_REPOSITORY}:${DOCKER_TAG} \
+            --platform linux/arm64,linux/amd64 .
+      - name: Build and push docker image
+        env:
+          DOCKER_TAG: latest
+        if: steps.branch-name.outputs.is_tag != 'true'
+        run: |
           docker buildx build --file Dockerfile --progress plane --no-cache --push \
             --tag ${{ secrets.DOCKERHUB_USERNAME }}/${DOCKER_REPOSITORY}:${DOCKER_TAG} \
             --platform linux/arm64,linux/amd64 .
